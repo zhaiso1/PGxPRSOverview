@@ -1,0 +1,267 @@
+---
+title: "Untitled"
+output: html_document
+date: '2022-08-04'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list = ls())
+```
+
+```{r}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+library(cowplot)
+library(stringr)
+library(gridExtra)
+library(ggpubr)
+```
+
+```{r}
+dat <- read_excel("/SFS/project/bards/zhaiso/PGxPRS_Review/paper_summary_04252022.xlsx")
+```
+
+################################################################################
+
+```{r}
+dat1 <- dat[,c(21,13)]
+dat1$`PRS works?`[32] <- "Y"
+index <- grep("Y / N", dat1$`PRS works?`)
+dat1$`PRS works?`[index] <- "Y"
+
+app = dat1$Application
+
+x = str_split(app," \\+ ") 
+
+extractlist <- function(x,i){
+  return(x[i])
+}
+
+app1 <- lapply(x, extractlist, 1) %>% unlist()
+app2 <- lapply(x, extractlist, 2) %>% unlist()
+```
+
+```{r}
+dat2 <- cbind.data.frame(BC=app1, TC=app2, S=dat1$`PRS works?`)
+
+dat2$BC[which(dat2$BC=="PGx PRS (T)")] <- "Base Cohort\n PGx: T arm"
+dat2$BC[which(dat2$BC=="Disease PRS")] <- "Base Cohort\n Disease"
+dat2$BC[which(dat2$BC=="PGx PRS")] <- "Base Cohort\n PGx: T&C arms"
+dat2$BC[which(dat2$BC=="Disease / PGx PRS (T)")] <- "Base Cohort\n PGx: T arm"
+
+dat2$TC[which(dat2$TC == "T")] <- "Target Cohort\n PGx: T arm"
+dat2$TC[which(dat2$TC == "T and C")] <- "Target Cohort\n PGx: T&C arms"
+
+dat2$BC <- factor(dat2$BC)
+dat2$TC <- factor(dat2$TC)
+dat2$S <- factor(dat2$S, levels = c("Y","N"))
+colnames(dat2) <- c("BC","TC","PRS works?")
+```
+
+```{r}
+BC <- c("Base Cohort\n Disease", "Base Cohort\n PGx: T arm", "Base Cohort\n PGx: T&C arms")
+TC <- c("Target Cohort\n PGx: T arm", "Target Cohort\n PGx: T&C arms")
+
+#BC0 <- c("Disease Study", "PGx Study: T arm", "PGx Study: T&C arms")
+#TC0 <- c("PGx Study: T arm", "PGx Study: T&C arms")
+
+dat3 <- double()
+for (bc in BC) {
+  for (tc in TC) {
+    index <- which(dat2$BC == bc & dat2$TC == tc)
+    c1 = sum(dat2$`PRS works?`[index] == "Y")
+    c2 = sum(dat2$`PRS works?`[index] == "N")
+    
+    t1 <- c(bc,tc,"Y",c1)
+    t2 <- c(bc,tc,"N",c2)
+    
+    t0 <- rbind(t1,t2)
+    dat3 <- rbind(dat3, t0)
+  }
+}
+
+dat3 <- as.data.frame(dat3)
+colnames(dat3) <- c("BC","TC","PRSworks","Count")
+dat3$Count <- as.numeric(dat3$Count)
+dat3$BC <- factor(dat3$BC)
+dat3$TC <- factor(dat3$TC)
+dat3$PRSworks <- factor(dat3$PRSworks, levels = c("Y","N"), labels = c("Yes","No"))
+
+dat3$label <- dat3$Count
+dat3$label <- c("44 (79%)","12 (21%)","15 (83%)","3 (17%)","11 (85%)","2 (15%)","2 (100%)","0","0","0","1 (100%)","0")
+```
+
+```{r}
+p <- ggplot(data=dat3, aes(x=PRSworks, y=Count, stat="bin", fill=PRSworks)) + 
+     geom_bar(stat="identity", position=position_dodge()) + 
+     xlab("PRS success status") + ylab("Frequency") + labs(title = "A") +
+     facet_grid(rows = vars(TC),cols = vars(BC)) +
+     geom_text(aes(label = label), vjust = -0.5, size=6, col="black") +
+     geom_text(aes(label = label), vjust = -0.5, size=6, col="black") +
+     scale_y_continuous(limits = c(0,50), breaks = seq(0,50,10)) +
+     theme_bw() +
+     theme(legend.position = "none",
+           strip.text = element_text(size = 18),
+           axis.title = element_text(size = 18),
+           axis.text = element_text(size = 18),
+           plot.title = element_text(size = 20))
+p
+```
+
+
+################################################################################
+
+```{r}
+dat1 <- dat[,c(15,16,13)]
+dat1$`PRS works?`[32] <- "Y"
+index <- grep("Y / N", dat1$`PRS works?`)
+dat1$`PRS works?`[index] <- "Y"
+```
+
+```{r}
+dat2 <- dat1; colnames(dat2) <- c("BC","TC","PRS works?")
+
+dat2$BC[which(dat2$BC=="EUR European")] <- "Base Cohort\n European"
+dat2$BC[which(dat2$BC=="EAS East Asian")] <- "Base Cohort\n Non-European"
+dat2$BC[which(dat2$BC=="LAT Latino")] <- "Base Cohort\n Non-European"
+dat2$BC[which(dat2$BC=="Multiple")] <- "Base Cohort\n Multiple"
+
+dat2$TC[which(dat2$TC=="EUR European")] <- "Target Cohort\n European"
+dat2$TC[which(dat2$TC=="EAS East Asian")] <- "Target Cohort\n Non-European"
+dat2$TC[which(dat2$TC=="LAT Latino")] <- "Target Cohort\n Non-European"
+dat2$TC[which(dat2$TC=="Multiple")] <- "Target Cohort\n Multiple"
+
+dat2$BC <- factor(dat2$BC)
+dat2$TC <- factor(dat2$TC)
+dat2$`PRS works?` <- factor(dat2$`PRS works?`, levels = c("Y","N"))
+```
+
+```{r}
+BC <- c("Base Cohort\n European", "Base Cohort\n Non-European", "Base Cohort\n Multiple")
+TC <- c("Target Cohort\n European", "Target Cohort\n Non-European", "Target Cohort\n Multiple")
+
+dat3 <- double()
+for (bc in BC) {
+  for (tc in TC) {
+    index <- which(dat2$BC == bc & dat2$TC == tc)
+    c1 = sum(dat2$`PRS works?`[index] == "Y")
+    c2 = sum(dat2$`PRS works?`[index] == "N")
+    
+    t1 <- c(bc,tc,"Y",c1)
+    t2 <- c(bc,tc,"N",c2)
+    
+    t0 <- rbind(t1,t2)
+    dat3 <- rbind(dat3, t0)
+  }
+}
+
+dat3 <- as.data.frame(dat3)
+colnames(dat3) <- c("BC","TC","PRSworks","Count")
+dat3$Count <- as.numeric(dat3$Count)
+dat3$BC <- factor(dat3$BC)
+dat3$TC <- factor(dat3$TC)
+dat3$PRSworks <- factor(dat3$PRSworks, levels = c("Y","N"), labels = c("Yes","No"))
+
+dat3$label <- c("36 (82%)","8 (18%)","2 (100%)","0","12 (86%)","2 (14%)","0","0","8 (100%)","0","0","0","9 (64%)","5 (36%)","0","1 (100%)","6 (86%)","1 (14%)")
+```
+
+```{r}
+p2 <- ggplot(data=dat3, aes(x=PRSworks, y=Count, stat="bin", fill=PRSworks)) + 
+     geom_bar(stat="identity", position=position_dodge()) + 
+     xlab("PRS success status") + ylab("Frequency") + labs(title = "B") +
+     facet_grid(rows = vars(TC),cols = vars(BC)) +
+     geom_text(aes(label = label), vjust = -0.5, size=6, col="black") +
+     geom_text(aes(label = label), vjust = -0.5, size=6, col="black") +
+     scale_y_continuous(limits = c(0,50), breaks = seq(0,50,10)) +
+     theme_bw() +
+     theme(legend.position = "none",
+           strip.text = element_text(size = 18),
+           axis.title = element_text(size = 18),
+           axis.text = element_text(size = 18),
+           plot.title = element_text(size = 20))
+p2
+```
+
+################################################################################
+
+```{r}
+dat1 <- dat[,c(17,18,24,13)]
+dat1$`PRS works?`[32] <- "Y"
+index <- grep("Y / N", dat1$`PRS works?`)
+dat1$`PRS works?`[index] <- "Y"
+```
+
+```{r}
+dat2 <- dat1[,-c(2,3)]; colnames(dat2) <- c("Type","PRS works?")
+
+dat2$Type[which(dat2$Type=="N")] <- "Single Trait"
+dat2$Type[which(dat2$Type=="Analyzed separately")] <- "stPRS"
+dat2$Type[which(dat2$Type != "Single Trait" & dat2$Type != "stPRS")] <- "mtPRS"
+
+dat2$Type <- factor(dat2$Type, levels = c("Single Trait","stPRS","mtPRS"))
+dat2$`PRS works?` <- factor(dat2$`PRS works?`, levels = c("Y","N"))
+
+dat2$`PRS works?`[27] <- "Y"
+```
+
+```{r}
+Type <- c("Single Trait", "stPRS", "mtPRS")
+
+dat3 <- double()
+for (type in Type) {
+    index <- which(dat2$Type == type)
+    c1 = sum(dat2$`PRS works?`[index] == "Y")
+    c2 = sum(dat2$`PRS works?`[index] == "N")
+    
+    t1 <- c(type,"Y",c1)
+    t2 <- c(type,"N",c2)
+    
+    t0 <- rbind(t1,t2)
+    dat3 <- rbind(dat3, t0)
+}
+
+dat3 <- as.data.frame(dat3)
+colnames(dat3) <- c("Type","PRSworks","Count")
+dat3$Count <- as.numeric(dat3$Count)
+dat3$Type <- factor(dat3$Type, levels = c("Single Trait","stPRS","mtPRS"))
+dat3$PRSworks <- factor(dat3$PRSworks, levels = c("Y","N"), labels = c("Yes","No"))
+
+dat3$label <- c("53 (82%)","12 (18%)","17 (85%)","3 (15%)","4 (80%)","1 (20%)")
+```
+
+```{r}
+p3 <- ggplot(data=dat3, aes(x=PRSworks, y=Count, stat="bin", fill=PRSworks)) + 
+     geom_bar(stat="identity", position=position_dodge()) + 
+     xlab("PRS success status") + ylab("Frequency") + labs(title = "C") +
+     facet_grid(cols = vars(Type)) +
+     geom_text(aes(label = label), vjust = -0.5, size=5, col="black") +
+     geom_text(aes(label = label), vjust = -0.5, size=5, col="black") +
+     scale_y_continuous(limits = c(0,60), breaks = seq(0,60,10)) +
+     theme_bw() +
+     theme(legend.position = "none",
+           strip.text = element_text(size = 18),
+           axis.title = element_text(size = 18),
+           axis.text = element_text(size = 18),
+           plot.title = element_text(size = 20))
+p3
+```
+
+################################################################################
+
+```{r}
+combo3 <- grid.arrange(p, p2, p3, ncol = 2, nrow = 2, layout_matrix = rbind(c(1,2), c(3,2)))
+```
+
+```{r}
+ggsave(filename = "/SFS/project/bards/zhaiso/PGxPRS_Review/Figure/Figure_0201/Fig3_PRSwork_v2.png", plot = combo3,
+       device = "png",
+       width = 60,
+       height = 35,
+       units = "cm",
+       dpi = 200,
+       limitsize = FALSE)
+```
+

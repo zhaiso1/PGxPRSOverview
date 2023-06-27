@@ -1,0 +1,192 @@
+---
+title: "Untitled"
+output: html_document
+date: '2022-07-25'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list = ls())
+```
+
+```{r}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+library(cowplot)
+```
+
+```{r}
+dat <- read_excel("/SFS/project/bards/zhaiso/PGxPRS_Review/paper_summary_04252022.xlsx")
+```
+
+################################################################################
+
+```{r}
+count <- function(dat, name, category){
+  index <- which(colnames(dat) == name)
+  re <- double()
+  for (year in 2013:2022) {
+    x = dat[which(dat$Year == year),index]
+    d <- double()
+    for (k in 1:length(category)) {
+      d <- c(d, sum(x == category[k]))
+    }
+    re <- rbind(re, d)
+  }
+  rownames(re) <- 2013:2022; colnames(re) <- category
+  re
+}
+```
+
+################################################################################
+
+```{r}
+re <- count(dat, name = "Method", category = unique(dat$Method))
+
+re <- re[,-c(3,4,5,6,8)]
+
+re[8,] <- c(17,1,1)
+re[9,] <- c(27,6,1)
+
+re <- cbind(re, BLUP=rep(0,10))
+
+colnames(re) <- c("C+T","Bayesian","ML","BLUP")
+```
+
+```{r}
+re1 <- re[1,]
+for (i in 2:10) {
+  d <- apply(re[1:i,], 2, sum)
+  re1 <- rbind(re1, d)
+}
+
+rownames(re1) <- 2013:2022
+
+ct <- as.vector(re1)
+
+df <- cbind.data.frame(ct=ct,
+                       cate=rep(colnames(re),each=nrow(re)),
+                       year=rep(c(2013:2022),ncol(re)))
+
+df$cate <- factor(df$cate, levels = c("C+T","Bayesian","ML","BLUP"))
+
+df$ct[10] <- 80
+df$ct[20] <- 9
+df$ct[30] <- 3
+```
+
+```{r}
+pal_disease <- brewer.pal(n = 4, "Set1")
+
+p5 <- ggplot(df, aes(x = year, y = ct, fill = cate)) +
+  geom_area(position = "stack", alpha = 0.85) +
+  theme_bw() +
+  ylab("Proportion of total studies") +
+  xlab("Year") + labs(title = "A") + 
+  scale_fill_manual(values = pal_disease, name = "Method") +
+  theme(axis.text.x = element_text(size = 18, angle = 30, vjust = 1, hjust=1),
+        axis.text.y = element_text(size = 18),
+        axis.title = element_text(size = 18),
+        legend.title = element_text(size = 20),
+        legend.text = element_text(size = 20),
+        plot.title = element_text(size = 20)) +
+  scale_y_continuous(limits = c(0,92), breaks = seq(0,90,10)) +
+  scale_x_continuous(breaks = c(2013:2022))
+p5
+```
+
+################################################################################
+
+```{r}
+dat1 <- read_excel("/SFS/project/bards/zhaiso/PGxPRS_Review/paper_summary_04252022_sheet2.xlsx")
+dat1[1,7] <- 2013
+dat1[6,2] <- "Bayesian"
+```
+
+```{r}
+re <- count(dat1, name = "Category", category = unique(dat1$Category))
+
+re <- re[,-4]
+
+re1 <- re[1,]
+for (i in 2:10) {
+  d <- apply(re[1:i,], 2, sum)
+  re1 <- rbind(re1, d)
+}
+
+rownames(re1) <- 2013:2022
+```
+
+```{r}
+ct <- as.vector(re1)
+
+df <- cbind.data.frame(ct=ct,
+                       Method=rep(colnames(re1),each=nrow(re1)),
+                       year=rep(c(2013:2022),ncol(re1)))
+
+df$Method <- factor(df$Method, levels = c("C+T","Bayesian","ML","BLUP"))
+```
+
+```{r}
+pal_disease <- brewer.pal(n = 4, "Set1")
+
+p6 <- ggplot(df, aes(x = year, y = ct, fill = Method)) +
+  geom_area(position = "stack", alpha = 0.85) +
+  theme_bw() +
+  ylab("Proportion of total methods") +
+  xlab("Year") + labs(title = "B") +
+  scale_fill_manual(values = pal_disease, name = "Method") +
+  theme(axis.text.x = element_text(size = 18, angle = 30, vjust = 1, hjust=1),
+        axis.text.y = element_text(size = 18),
+        axis.title = element_text(size = 18),
+        legend.title = element_text(size = 20),
+        legend.text = element_text(size = 20),
+        plot.title = element_text(size = 20)) +
+  scale_y_continuous(limits = c(0,22), breaks = seq(0,20,5)) +
+  scale_x_continuous(breaks = c(2013:2022))
+p6
+```
+
+```
+p1 <- ggplot(df, aes(x = year, y = ct, group = Method)) +
+  geom_line(aes(color = Method)) +
+  geom_point(aes(color = Method), size=3) +
+  theme_bw() +
+  ylab("Cumulated available methods") +
+  xlab("Year") +
+  theme(axis.text.x = element_text(size = 10, face = "bold"),
+        axis.text.y = element_text(size = 10, face = "bold"),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10)) +
+  scale_y_continuous(limits = c(0,10), breaks = seq(0,10,2)) +
+  scale_x_continuous(breaks = c(2013:2022)) +
+  scale_color_manual(values=c("red","blue","darkgreen","purple"))
+p1
+```
+
+
+################################################################################
+
+```{r}
+combo3 <- plot_grid(p5, p6,
+                    nrow = 1,
+                    ncol = 2,
+                    align = 'hv',
+                    rel_widths = c(1, 1))
+
+combo3
+```
+
+```{r}
+ggsave(filename = "/SFS/project/bards/zhaiso/PGxPRS_Review/Figure/Figure_0201/Fig2_method.png", plot = combo3,
+       device = "png",
+       width = 50,
+       height = 25,
+       units = "cm",
+       dpi = 200,
+       limitsize = FALSE)
+```
+
+

@@ -1,0 +1,467 @@
+---
+title: "Untitled"
+output: html_document
+date: '2022-07-25'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list = ls())
+```
+
+```{r}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+library(cowplot)
+```
+
+```{r}
+dat <- read_excel("/SFS/project/bards/zhaiso/PGxPRS_Review/paper_summary_04252022.xlsx")
+```
+
+################################################################################
+
+```{r}
+count <- function(dat, name, category){
+  index <- which(colnames(dat) == name)
+  re <- double()
+  for (year in 2013:2022) {
+    x = dat[which(dat$Year == year),index]
+    d <- double()
+    for (k in 1:length(category)) {
+      d <- c(d, sum(x == category[k]))
+    }
+    re <- rbind(re, d)
+  }
+  rownames(re) <- 2013:2022; colnames(re) <- category
+  re
+}
+```
+
+################################################################################
+
+```{r}
+for (year in 2013:2022) {
+  print(table(dat$`BC ancestry`[which(dat$Year == year)]))
+}
+
+ct <- rbind(c(1,0,0),
+            c(1,0,0),
+            c(1,0,0),
+            c(3,0,1),
+            c(1,1,4),
+            c(8,0,1),
+            c(7,0,3),
+            c(14,2,3),
+            c(23,2,7),
+            c(1,3,3)) 
+
+re1 <- ct[1,]
+for (i in 2:10) {
+  d <- apply(ct[1:i,], 2, sum)
+  re1 <- rbind(re1, d)
+}
+
+rownames(re1) <- 2013:2022
+
+df <- cbind.data.frame(ct=as.vector(re1),
+                       cate=rep(c("European","Non-European","Multiple"),each=10),
+                       year=rep(c(2013:2022),3))
+
+df$cate <- factor(df$cate, levels = c("European","Non-European","Multiple"))
+```
+
+```{r}
+pal_disease <- brewer.pal(n = 3, "Set1")
+
+p1 <- ggplot(df, aes(x = year, y = ct, fill = cate)) +
+  geom_area(position = "stack", alpha = 0.85) +
+  theme_bw() +
+  ylab("Proportion of total studies") +
+  xlab("Year") +
+  scale_fill_manual(values = pal_disease, name = "BC Ancestry") +
+  theme(axis.text.x = element_text(size = 15, angle = 30, vjust = 1, hjust=1),
+        axis.text.y = element_text(size = 15),
+        axis.title = element_text(size = 15),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 12)) +
+  scale_y_continuous(limits = c(0,90), breaks = seq(0,90,10)) +
+  scale_x_continuous(breaks = c(2013:2022))
+p1
+```
+
+################################################################################
+
+```{r}
+for (year in 2013:2022) {
+  print(table(dat$`TC ancestry`[which(dat$Year == year)]))
+}
+
+ct <- rbind(c(1,0,0),
+            c(1,0,0),
+            c(1,0,0),
+            c(4,0,0),
+            c(4,1,1),
+            c(4,0,5),
+            c(7,0,3),
+            c(12,2,5),
+            c(22,4,6),
+            c(2,4,1))
+
+re1 <- ct[1,]
+for (i in 2:10) {
+  d <- apply(ct[1:i,], 2, sum)
+  re1 <- rbind(re1, d)
+}
+
+rownames(re1) <- 2013:2022
+
+df <- cbind.data.frame(ct=as.vector(re1),
+                       cate=rep(c("European","Non-European","Multiple"),each=10),
+                       year=rep(c(2013:2022),3))
+
+df$cate <- factor(df$cate, levels = c("European","Non-European","Multiple"))
+```
+
+```{r}
+pal_disease <- brewer.pal(n = 3, "Set1")
+
+p2 <- ggplot(df, aes(x = year, y = ct, fill = cate)) +
+  geom_area(position = "stack", alpha = 0.85) +
+  theme_bw() +
+  ylab("Proportion of total studies") +
+  xlab("Year") +
+  scale_fill_manual(values = pal_disease, name = "TC Ancestry") +
+  theme(axis.text.x = element_text(size = 15, angle = 30, vjust = 1, hjust=1),
+        axis.text.y = element_text(size = 15),
+        axis.title = element_text(size = 15),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 12)) +
+  scale_y_continuous(limits = c(0,90), breaks = seq(0,90,10)) +
+  scale_x_continuous(breaks = c(2013:2022))
+p2
+```
+
+################################################################################
+
+```{r}
+re <- count(dat, name = "Application", category = unique(dat$Application))
+
+re[9,1] <- 7
+re[10,1] <- 1
+
+re <- re[,-5]
+
+x1 = apply(re[,2:3], 1, sum)
+x2 = apply(re[,c(1,5)], 1, sum)
+x3 = re[,4]
+
+re <- cbind(x1,x2,x3)
+colnames(re) <- c("Disease Study","PGx Study: T arm","PGx Study: T&C arms")
+
+re[8,3] <- 2
+re[9,1] <- 22
+```
+
+```{r}
+re1 <- re[1,]
+for (i in 2:10) {
+  d <- apply(re[1:i,], 2, sum)
+  re1 <- rbind(re1, d)
+}
+
+rownames(re1) <- 2013:2022
+
+ct <- as.vector(re1)
+
+df <- cbind.data.frame(ct=ct,
+                       cate=rep(colnames(re),each=nrow(re)),
+                       year=rep(c(2013:2022),ncol(re)))
+
+df$cate <- factor(df$cate, levels = c("Disease Study","PGx Study: T arm","PGx Study: T&C arms"))
+```
+
+```{r}
+pal_disease <- brewer.pal(n = 3, "Set1")
+
+p3 <- ggplot(df, aes(x = year, y = ct, fill = cate)) +
+  geom_area(position = "stack", alpha = 0.85) +
+  theme_bw() +
+  ylab("Proportion of total studies") +
+  xlab("Year") +
+  scale_fill_manual(values = pal_disease, name = "BC GWAS") +
+  theme(axis.text.x = element_text(size = 15, angle = 30, vjust = 1, hjust=1),
+        axis.text.y = element_text(size = 15),
+        axis.title = element_text(size = 15),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 12)) +
+  scale_y_continuous(limits = c(0,90), breaks = seq(0,90,10)) +
+  scale_x_continuous(breaks = c(2013:2022))
+p3
+```
+
+################################################################################
+
+```{r}
+re <- count(dat, name = "Application", category = unique(dat$Application))
+
+re[9,1] <- 7
+re[10,1] <- 1
+
+re <- re[,-5]
+
+x1 = apply(re[,1:2], 1, sum)
+x2 = apply(re[,3:5], 1, sum)
+
+re <- cbind(x1,x2)
+colnames(re) <- c("PGx Study: T arm","PGx Study: T&C arms")
+```
+
+
+```{r}
+re1 <- re[1,]
+for (i in 2:10) {
+  d <- apply(re[1:i,], 2, sum)
+  re1 <- rbind(re1, d)
+}
+
+rownames(re1) <- 2013:2022
+
+ct <- as.vector(re1)
+
+df <- cbind.data.frame(ct=ct,
+                       cate=rep(colnames(re),each=nrow(re)),
+                       year=rep(c(2013:2022),ncol(re)))
+
+df$cate <- factor(df$cate, levels = c("PGx Study: T arm","PGx Study: T&C arms"))
+```
+
+```{r}
+pal_disease <- brewer.pal(n = 3, "Set1"); pal_disease <- pal_disease[2:3]
+
+p4 <- ggplot(df, aes(x = year, y = ct, fill = cate)) +
+  geom_area(position = "stack", alpha = 0.85) +
+  theme_bw() +
+  ylab("Proportion of total studies") +
+  xlab("Year") +
+  scale_fill_manual(values = pal_disease, name = "TC Study") +
+  theme(axis.text.x = element_text(size = 15, angle = 30, vjust = 1, hjust=1),
+        axis.text.y = element_text(size = 15),
+        axis.title = element_text(size = 15),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 12)) +
+  scale_y_continuous(limits = c(0,90), breaks = seq(0,90,10)) +
+  scale_x_continuous(breaks = c(2013:2022))
+p4
+```
+
+################################################################################
+
+```{r}
+re <- count(dat, name = "Multiple Traits Analysis", category = unique(dat$`Multiple Traits Analysis`))
+
+x1 = re[,1:2]
+x2 = apply(re[,3:5], 1, sum)
+
+re <- cbind(x1,x2)
+colnames(re) <- c("Single Trait","stPRS","mtPRS")
+
+re[7,3] <- 0
+re[8,3] <- 2
+```
+
+```{r}
+re1 <- re[1,]
+for (i in 2:10) {
+  d <- apply(re[1:i,], 2, sum)
+  re1 <- rbind(re1, d)
+}
+
+rownames(re1) <- 2013:2022
+
+ct <- as.vector(re1)
+
+df <- cbind.data.frame(ct=ct,
+                       cate=rep(colnames(re),each=nrow(re)),
+                       year=rep(c(2013:2022),ncol(re)))
+
+df$cate <- factor(df$cate, levels = c("Single Trait","stPRS","mtPRS"))
+```
+
+```{r}
+pal_disease <- brewer.pal(n = 3, "Set1")
+
+p5 <- ggplot(df, aes(x = year, y = ct, fill = cate)) +
+  geom_area(position = "stack", alpha = 0.85) +
+  theme_bw() +
+  ylab("Proportion of total studies") +
+  xlab("Year") +
+  scale_fill_manual(values = pal_disease, name = "Multi-Trait") +
+  theme(axis.text.x = element_text(size = 15, angle = 30, vjust = 1, hjust=1),
+        axis.text.y = element_text(size = 15),
+        axis.title = element_text(size = 15),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 12)) +
+  scale_y_continuous(limits = c(0,90), breaks = seq(0,90,10)) +
+  scale_x_continuous(breaks = c(2013:2022))
+p5
+```
+
+################################################################################
+# METHOD SUMMARY
+
+```{r}
+dat <- read_excel("/SFS/project/bards/zhaiso/PGxPRS_Review/paper_summary_04252022.xlsx")
+```
+
+################################################################################
+
+```{r}
+count <- function(dat, name, category){
+  index <- which(colnames(dat) == name)
+  re <- double()
+  for (year in 2013:2022) {
+    x = dat[which(dat$Year == year),index]
+    d <- double()
+    for (k in 1:length(category)) {
+      d <- c(d, sum(x == category[k]))
+    }
+    re <- rbind(re, d)
+  }
+  rownames(re) <- 2013:2022; colnames(re) <- category
+  re
+}
+```
+
+################################################################################
+
+```{r}
+re <- count(dat, name = "Method", category = unique(dat$Method))
+
+re <- re[,-c(3,4,5,6,8)]
+
+re[8,] <- c(17,1,1)
+re[9,] <- c(27,6,1)
+
+re <- cbind(re, BLUP=rep(0,10))
+
+colnames(re) <- c("C+T","Bayesian","ML","BLUP")
+```
+
+```{r}
+re1 <- re[1,]
+for (i in 2:10) {
+  d <- apply(re[1:i,], 2, sum)
+  re1 <- rbind(re1, d)
+}
+
+rownames(re1) <- 2013:2022
+
+ct <- as.vector(re1)
+
+df <- cbind.data.frame(ct=ct,
+                       cate=rep(colnames(re),each=nrow(re)),
+                       year=rep(c(2013:2022),ncol(re)))
+
+df$cate <- factor(df$cate, levels = c("C+T","Bayesian","ML","BLUP"))
+
+df$ct[20] <- 9
+```
+
+```{r}
+pal_disease <- brewer.pal(n = 4, "Set1")
+
+pA <- ggplot(df, aes(x = year, y = ct, fill = cate)) +
+  geom_area(position = "stack", alpha = 0.85) +
+  theme_bw() +
+  ylab("Proportion of total studies") +
+  xlab("Year") +
+  scale_fill_manual(values = pal_disease, name = "Method") +
+  theme(axis.text.x = element_text(size = 15, angle = 30, vjust = 1, hjust=1),
+        axis.text.y = element_text(size = 15),
+        axis.title = element_text(size = 15),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 12)) +
+  scale_y_continuous(limits = c(0,93), breaks = seq(0,90,10)) +
+  scale_x_continuous(breaks = c(2013:2022))
+pA
+```
+
+################################################################################
+
+```{r}
+dat1 <- read_excel("/SFS/project/bards/zhaiso/PGxPRS_Review/paper_summary_04252022_sheet2.xlsx")
+dat1[1,7] <- 2013
+dat1[6,2] <- "Bayesian"
+```
+
+```{r}
+re <- count(dat1, name = "Category", category = unique(dat1$Category))
+
+re <- re[,-4]
+
+re1 <- re[1,]
+for (i in 2:10) {
+  d <- apply(re[1:i,], 2, sum)
+  re1 <- rbind(re1, d)
+}
+
+rownames(re1) <- 2013:2022
+```
+
+```{r}
+ct <- as.vector(re1)
+
+df <- cbind.data.frame(ct=ct,
+                       Method=rep(colnames(re1),each=nrow(re1)),
+                       year=rep(c(2013:2022),ncol(re1)))
+
+df$Method <- factor(df$Method, levels = c("C+T","Bayesian","ML","BLUP"))
+```
+
+```{r}
+pal_disease <- brewer.pal(n = 4, "Set1")
+
+pB <- ggplot(df, aes(x = year, y = ct, fill = Method)) +
+  geom_area(position = "stack", alpha = 0.85) +
+  theme_bw() +
+  ylab("Proportion of total methods") +
+  xlab("Year") +
+  scale_fill_manual(values = pal_disease, name = "Method") +
+  theme(axis.text.x = element_text(size = 15, angle = 30, vjust = 1, hjust=1),
+        axis.text.y = element_text(size = 15),
+        axis.title = element_text(size = 15),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 12)) +
+  scale_y_continuous(limits = c(0,22), breaks = seq(0,20,5)) +
+  scale_x_continuous(breaks = c(2013:2022))
+pB
+```
+
+################################################################################
+
+```{r}
+combo3 <- plot_grid(p3, p4, p1, p2, p5, pA, pB, labels = c("A", "B", "C", "D", "E", "F", "G"),
+                    nrow = 2,
+                    ncol = 4,
+                    align = 'hv',
+                    rel_widths = c(1, 1, 1, 1),
+                    rel_heights = c(1, 1),
+                    byrow=TRUE)
+
+combo3
+```
+
+```{r}
+ggsave(filename = "/SFS/project/bards/zhaiso/PGxPRS_Review/Figure/Fig2_sum_v1.png", plot = combo3,
+       device = "png",
+       width = 85,
+       height = 35,
+       units = "cm",
+       dpi = 500,
+       limitsize = FALSE)
+```
+
+
